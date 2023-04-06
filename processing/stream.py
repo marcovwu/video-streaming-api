@@ -110,7 +110,7 @@ class VideoStream(Stream):
         while ret:
             ret, img = self.capture.read()
             self.cur_frame_id += 1
-            if self.cur_frame_id % self.div_fps != 0:
+            if self.cur_frame_id % self.div_fps == 0:
                 break
         return ret, img, {'sec': self.start_sec + (self.cur_frame_id / self.fps), 'curframe': self.cur_frame_id}
 
@@ -131,7 +131,7 @@ class LiveVideoStream:
         # info
         self.ip = stream_info['ip']
         self.port = stream_info['port']
-        self.content = stream_info['content']
+        self.stream_name = stream_info['stream_name']
         self.username = stream_info['username']
         self.password = stream_info['password']
         self.group = stream_info['group']
@@ -164,7 +164,7 @@ class LiveVideoStream:
     def init(self):
         """ Initialize variables that will be used for live streaming. """
         userinfo = "" if self.username == ' ' and self.password == ' ' else f"{self.username}:{self.password}"
-        self.rtsp_url = f"rtsp://{userinfo}@{self.ip}:{self.port}/{self.content}"
+        self.rtsp_url = f"rtsp://{userinfo}@{self.ip}:{self.port}/{self.stream_name}"
         self.stop_stream = False
         self.stop_signal = False
         self.fps = 0

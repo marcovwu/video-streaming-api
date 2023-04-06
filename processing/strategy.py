@@ -8,6 +8,24 @@ from abc import ABC, abstractmethod
 
 class ImageProcessingStrategy(ABC):
     @abstractmethod
+    def pre_process_images(images_info, images, system_info):
+        """ Only use to inference the batch images from dataset
+            Implement your pre-process flow here, for example:
+            - Perform some image processing on the input image
+            - Generate some events based on the processed image
+            - Plot the output information into image
+
+        Args:
+            images_info: An dictionary of the images informations.
+            images: A cv2 array of the input images.
+            system_info: A dictionary of the system informations. (Use to update timer output)
+
+        Returns:
+            A tuple output will send to process_image.
+        """
+        return tuple()
+
+    @abstractmethod
     def process_image(manager, image_info):
         """ Implement your process flow here, for example:
             - Perform some image processing on the input image
@@ -24,7 +42,7 @@ class ImageProcessingStrategy(ABC):
         return True
 
     @abstractmethod
-    def check_stop(manager):
+    def check_stop(manager, image_info):
         """ Define your rules for stopping the current video streaming here.
 
         Args:
@@ -37,10 +55,13 @@ class ImageProcessingStrategy(ABC):
 
 
 class OnlyShowStrategy(ImageProcessingStrategy):
-    def process_image(manager, image_info):
-        pass
+    def pre_process_images(images_info, images, system_info):
+        return tuple()
 
-    def check_stop(manager):
+    def process_image(manager, image_info):
+        return True
+
+    def check_stop(manager, image_info):
         if manager.vid_writer.stop_flag:
             return True
         return False
@@ -51,8 +72,11 @@ class CaptureBackgroundStrategy(ImageProcessingStrategy):
     bad_image_thres = 30
     is_need_capture = True
 
+    def pre_process_images(images_info, images, system_info):
+        return tuple()
+
     def process_image(manager, image_info):
-        _, _, img, info = image_info
+        _, _, img, info, _ = image_info
         if CaptureBackgroundStrategy.is_need_capture:
             if img is None:
                 CaptureBackgroundStrategy.bad_image_counter += 1
@@ -71,7 +95,7 @@ class CaptureBackgroundStrategy(ImageProcessingStrategy):
                 logger.info('Capture background image to %s successfull !!' % (save_name))
         return True
 
-    def check_stop(manager):
+    def check_stop(manager, image_info):
         if not CaptureBackgroundStrategy.is_need_capture:
             return True
         return False
@@ -96,8 +120,11 @@ class RecordVideoStrategy(ImageProcessingStrategy):
             else:
                 manager.visualizer.show_img(manager.vid_writer.WINDOW_NAME, img)
 
+    def pre_process_images(self, images_info, images, system_info):
+        return tuple()
+
     def process_image(self, manager, image_info):
-        _, _, img, info = image_info
+        _, _, img, info, _ = image_info
         if self.is_need_record:
             if img is not None:
                 # show
@@ -115,7 +142,7 @@ class RecordVideoStrategy(ImageProcessingStrategy):
                     return True
         return False
 
-    def check_stop(self, manager):
+    def check_stop(self, manager, image_info):
         if self.is_need_record and manager.stream.capture.isOpened() \
            and (self.frame / manager.stream.infer_fps < self.record_seconds)  \
            and (not manager.vid_writer.stop_flag):

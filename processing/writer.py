@@ -25,6 +25,7 @@ class VideoWriter:
         self.writer = None
         self.already_init_writer = init_writer
         self.stop_flag = True
+        self.internal_show = False
         self.visualizer = visualizer
         self.queue_maxsize = queue_maxsize
         self.queue = Queue(maxsize=self.queue_maxsize) if queue is None else queue
@@ -107,6 +108,7 @@ class VideoWriter:
         if delay:
             self.plot_time_delay(im0, current_sec)
         if self.visualizer is None:
+            self.internal_show = True
             cv2.imshow(self.WINDOW_NAME, im0)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 return True
@@ -141,7 +143,7 @@ class VideoWriter:
 
         # put None to the queue of visualizer for release the current window
         self.stop_flag = True
-        if self._check_show(show, vis) and self.visualizer is None:
+        if self.internal_show and self._check_show(show, vis) and self.visualizer is None:
             cv2.destroyWindow(self.WINDOW_NAME)
         self.run_stop()
         logger.info('Stop video writer thread.')

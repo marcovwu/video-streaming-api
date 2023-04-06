@@ -3,8 +3,8 @@ import os
 from loguru import logger
 from threading import Thread
 
-from videos.stream import Stream
-from videos.writer import VideoWriter
+from .stream import Stream
+from .writer import VideoWriter
 
 
 class VideoManagers:
@@ -61,7 +61,7 @@ class VideoManagers:
 
     @classmethod
     def create(
-        cls, video_paths, div_fps, save_dir, vis_mode, video_sec=0,
+        cls, video_paths: dict, div_fps, save_dir, vis_mode, video_sec=0,
         visualizer=None, end_title='', SYSDTFORMAT='', YMDFORMAT='', warn=True
     ):
         """
@@ -93,10 +93,10 @@ if __name__ == '__main__':
     # Create VideoManager
     video_managers = VideoManagers.create(
         {0: {
-            'ip': "192.168.0.210", 'port': "8554", 'username': "admin", 'password': "password", 'content': "ch1",
-            'group': "0929_full", 'channel': 'ch1'
+            'ip': "192.168.66.28", 'port': "554", 'username': "Admin", 'password': "1234",
+            'stream_name': "ch1", 'group': "TR", 'channel': 'Vivocam1'
         }},
-        div_fps=2, save_dir='', vis_mode='show', video_sec=70, visualizer=None, end_title='',
+        div_fps=2, save_dir='', vis_mode='show', video_sec=600, visualizer=None, end_title='',
         SYSDTFORMAT='%Y%m%d%H%M%S', YMDFORMAT='%Y%m%d000000'
     )
 

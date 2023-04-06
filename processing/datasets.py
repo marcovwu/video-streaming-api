@@ -1,10 +1,13 @@
 import os
+import sys
 import glob
 import numpy as np
 
 from pathlib import Path
 
-from videos.manager import VideoManagers
+if Path(__file__).parent not in sys.path:
+    sys.path.append(Path(__file__).parent)
+from .manager import VideoManagers
 
 
 class LoadBatchVideos:
@@ -76,6 +79,22 @@ class LoadBatchVideos:
             frame = epochframe
         return frame
 
+    def transfer_images_info(self, stream_info, img0s):
+        imgs_info = []
+        for i, (_in, frame, dt, cur_sec, cur_time, vid_time, info) in enumerate(stream_info):
+            imgs_info.append({
+                "id": _in,
+                "frame": frame,
+                "height": img0s[i].shape[1],
+                "width": img0s[i].shape[2],
+                "ratio": min(self.img_size[0] / img0s[i].shape[1], self.img_size[1] / img0s[i].shape[2]),
+                "raw_img": img0s[i],
+                "dt": dt, "cur_sec": cur_sec, "cur_time": cur_time, "vid_time": vid_time,
+                "is_newepoch": self.video_managers[_in].epoch['n'],
+                "is_epochfinal": self.video_managers[_in].epoch['f'],
+            })
+        return imgs_info
+
     def _init_from_manager(self):
         self.batch = len(self.video_managers)
 
@@ -120,7 +139,7 @@ class LoadBatchVideos:
                     manager.vid_thread.join()
             raise StopIteration
 
-        img0s, imgs, inx = [], None, []
+        img0s, imgs, stream_info = [], None, []
         for k, manager in self.video_managers.items():
             if manager.stream.capture.isOpened():
                 for _ in range(self.vid_batch):
@@ -143,8 +162,8 @@ class LoadBatchVideos:
 
                     # Record Information
                     self.finalframes[k] = LoadBatchVideos.frame_counter(self.frames[k], manager.stream.epochframes)
-                    inx.append((k, self.finalframes[k], *manager.stream.get_cur_info(info['sec']), info))
-        return inx, img0s, imgs
+                    stream_info.append((k, self.finalframes[k], *manager.stream.get_cur_info(info['sec']), info))
+        return self.transfer_images_info(stream_info, img0s), imgs
 
     def __len__(self):
         return int(np.ceil(max([

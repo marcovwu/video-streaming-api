@@ -31,20 +31,23 @@ Then extend your own image processing strategies from `ImageProcessingStrategy` 
 runner = Runner(
     video_paths={
         0: {
-            'ip': "192.168.0.100", 'port': "5000", 'username': "admin", 'password': "password", 'content': "ch1",
-            'group': "TAIWAN", 'channel': 'ch1'
+            'ip': "192.168.66.28", 'port': "554", 'username': "Admin", 'password': "1234",
+            'stream_name': "ch5", 'group': "TR", 'channel': 'Vivocam1'
         }
-    },
+    },  # Dictionary that uses VideoManagers. List (["/path_to_your_video/...mp4", ...]) will use LoadBatchVideos.
+    vid_batch=1,  # Sets the batch in each stream.
     div_fps=1,  # Used to control inference FPS = original FPS / div_fps.
+    preproc=None,  # Pre-processing Transformer for images.
+    imgsz=(640, 640),  # Use to pre-process image to this size.
     save_dir='',  # Used to write video in this format: /save_dir/group/channel/YMDFORMAT/SYSDTFORMAT.mp4
     vis_mode='all',  # 'show': show video streaming in window, 'write': only write into output video, 'all': both.
-    # video_sec=60,  # Only used to record stream.video_sec and calculate stream.epochframes in real-time video.
-    # visualizer=None,  # A unique instance to show the video streaming.
-    # start=False,  # Automatically start capturing images from video streaming after successful initialization.
-    # end_title='',  # Used by logger.info after the new video has been written to output from writer.
+    video_sec=600,  # Only used to record stream.video_sec and calculate stream.epochframes in real-time video.
+    visualizer=None,  # A unique instance to show the video streaming.
+    end_title='',  # Used by logger.info after the new video has been written to output from writer.
     SYSDTFORMAT='%Y%m%d%H%M%S',  # Used to name the datetime.mp4.
     YMDFORMAT='%Y%m%d000000',  # Used to name the date_time folder.
-    warning=True,  # Show warnings in the terminal. Set to False to skip showing information.
+    warnning=True,  # Show warnings in the terminal. Set to False to skip showing information.
+    start=False,  # Automatically start capturing images from video streaming after successful initialization.
     processing_strategy=OnlyShowStrategy  # Create strategy instance by extending the ImageProcessingStrategy class.
 )
 
