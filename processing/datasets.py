@@ -132,11 +132,6 @@ class LoadBatchVideos:
 
     def __next__(self):
         if self.batch == 0 or all([m.stream.stop_stream for m in self.video_managers.values()]):
-            # close dataset video thread
-            for k, manager in self.video_managers.items():
-                if manager.vid_thread is not None and not manager.vid_writer.stop_flag:
-                    manager.vid_writer.put_frame(None, '', '', -1)
-                    manager.vid_thread.join()
             raise StopIteration
 
         img0s, imgs, stream_info = [], None, []

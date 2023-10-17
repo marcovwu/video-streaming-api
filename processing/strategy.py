@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 
 class ImageProcessingStrategy(ABC):
     @abstractmethod
-    def pre_process_images(images_info, images, system_info):
+    def pre_process_images(images_info, imgs, system_info):
         """ Only use to inference the batch images from dataset
             Implement your pre-process flow here, for example:
             - Perform some image processing on the input image
@@ -55,7 +55,7 @@ class ImageProcessingStrategy(ABC):
 
 
 class OnlyShowStrategy(ImageProcessingStrategy):
-    def pre_process_images(images_info, images, system_info):
+    def pre_process_images(images_info, imgs, system_info):
         return tuple()
 
     def process_image(manager, image_info):
@@ -72,11 +72,12 @@ class CaptureBackgroundStrategy(ImageProcessingStrategy):
     bad_image_thres = 30
     is_need_capture = True
 
-    def pre_process_images(images_info, images, system_info):
+    def pre_process_images(images_info, imgs, system_info):
         return tuple()
 
     def process_image(manager, image_info):
-        _, _, img, info, _ = image_info
+        _, _, img_info, info, _ = image_info
+        img = img_info["img"]
         if CaptureBackgroundStrategy.is_need_capture:
             if img is None:
                 CaptureBackgroundStrategy.bad_image_counter += 1
@@ -120,11 +121,12 @@ class RecordVideoStrategy(ImageProcessingStrategy):
             else:
                 manager.visualizer.show_img(manager.vid_writer.WINDOW_NAME, img)
 
-    def pre_process_images(self, images_info, images, system_info):
+    def pre_process_images(self, images_info, imgs, system_info):
         return tuple()
 
     def process_image(self, manager, image_info):
-        _, _, img, info, _ = image_info
+        _, _, img_info, info, _ = image_info
+        img = img_info["img"]
         if self.is_need_record:
             if img is not None:
                 # show

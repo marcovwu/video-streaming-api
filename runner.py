@@ -7,7 +7,7 @@ from pathlib import Path
 from loguru import logger
 
 if Path(__file__).parent not in sys.path:
-    sys.path.append(Path(__file__).parent)
+    sys.path.append(str(Path(__file__).parent))
 from processing.datasets import LoadBatchVideos
 from processing.manager import VideoManagers
 from processing.strategy import OnlyShowStrategy
@@ -93,6 +93,11 @@ class Runner:
         # close main infer thread
         cv2.destroyAllWindows()
 
+        # Stop the video manager
+        time.sleep(1)
+        for _, manager in self.dataset.video_managers.items():
+            Runner.stop_manager(manager)
+
     def process_image(self):
         # Show video streaming
         frames = {}
@@ -107,13 +112,13 @@ class Runner:
                 if not ret or img is None:
                     continue
                 sys_info = {'start': time.time(), 'infer': 0.0}
-                img_info = {"frame": frames[k], "info": info}
+                img_info = {"img": img, "frame": frames[k], "info": info}
 
                 # Pre-processing batch images
                 output = self.processing_strategy.pre_process_images(img_info, img, sys_info)
 
                 # processing image and show output information in image
-                w = self.processing_strategy.process_image(manager, (ret, frames[k], img, info, output))
+                w = self.processing_strategy.process_image(manager, (ret, frames[k], img_info, info, output))
                 if self.processing_strategy.check_stop(manager, info):
                     manager.stop(stop_stream=True)
                     continue
@@ -121,9 +126,13 @@ class Runner:
                 # show
                 if w and manager.vid_thread is not None:
                     cur_date_time, cur_second, cur_time, _ = manager.stream.get_cur_info(info['sec'])
-                    manager.vid_writer.put_frame(img, cur_date_time, cur_time, cur_second, vis='a')
+                    manager.vid_writer.put_frame(img_info["img"], cur_date_time, cur_time, cur_second, vis='a')
+
+        # close main infer thread
+        cv2.destroyAllWindows()
 
         # Stop the video manager
+        time.sleep(1)
         for _, manager in self.video_managers.items():
             Runner.stop_manager(manager)
 
@@ -146,8 +155,8 @@ if __name__ == "__main__":
     runner = Runner(
         video_paths={
             0: {
-                'ip': "192.168.66.28", 'port': "554", 'username': "Admin", 'password': "1234",
-                'stream_name': "ch5", 'group': "TR", 'channel': 'Vivocam1'
+                'ip': "192.168.200.140", 'port': " ", 'username': " ", 'password': " ",
+                'stream_name': "live2.sdp", 'group': "sdp", 'channel': 'live2'
             }
         },  # Dictionary that uses VideoManagers. List (["/path_to_your_video/...mp4", ...]) will use LoadBatchVideos.
         vid_batch=1,  # Sets the batch in each stream.

@@ -20,7 +20,8 @@ class Stream(ABC):
             raise NotImplementedError("Subclasses must implement from_dict()")
         if mode == "video":
             stream = VideoStream(video_path, div_fps, save_dir, SYSDTFORMAT=SYSDTFORMAT)
-            stream_thread = None
+            # stream_thread = None
+            stream_thread = Thread(target=stream.run, daemon=True)
         elif mode == "webcam":
             # TODO: maxsize
             stream = LiveVideoStream(
@@ -70,7 +71,7 @@ class VideoStream(Stream):
         self.save_dir = save_dir
         self.SYSDTFORMAT = SYSDTFORMAT
         self.group = source.split(os.sep)[-4]
-        self.channel = source.split('/')[-3]
+        self.channel = source.split(os.sep)[-3]
         self.date_time = source.split(os.sep)[-2]
         self.save_folder = Path(os.path.join(self.save_dir, self.group, self.channel, self.date_time))
         self.start_time = Stream.make_ydt('.'.join(os.path.basename(source).split('.')[:-1]))
@@ -86,6 +87,7 @@ class VideoStream(Stream):
         self.maxframes = int(self.capture.get(cv2.CAP_PROP_FRAME_COUNT))
         self.epochframes = self.maxframes
         self.infer_fps = self.fps // self.div_fps
+        self.queue = Queue(maxsize=100)  # self.queue_maxsize) if queue is None else queue
 
     def get_cur_info(self, cur_second):
         """ Get the time & sec in cur frame (second) """
@@ -95,13 +97,22 @@ class VideoStream(Stream):
 
     def stop(self, stop_stream=True):
         self.stop_stream = stop_stream
+
         if self.capture is not None and self.capture.isOpened():
             self.capture.release()
             logger.info('Stop the video capture process.')
 
     def run_stop(self, frame):
         if frame >= self.maxframes:
-            self.stop(stop_stream=True)
+            t = 0
+            while self.queue.full() and t < 10:  # 1 seconds
+                time.sleep(0.1)
+                t += 1
+
+            if self.queue.full():
+                self.queue.get()
+                logger.warning('Drop the streaming image !!')
+            self.queue.put((False, -1, None, {}))
             return True
         return False
 
@@ -116,12 +127,26 @@ class VideoStream(Stream):
 
     def read(self, frame):
         """ Read new image from stream """
-        ret, img, info = False, None, {'sec': -1}
-        while img is None and self.capture.isOpened() and not self.run_stop(frame):
+        ret, frame, img, info = self.queue.get(timeout=5)
+        if not ret:
+            self.stop(stop_stream=True)
+        # ret, img, info = False, None, {'sec': -1}
+        # while img is None and self.capture.isOpened() and not self.run_stop(frame):
+        #     ret, img, info = self.get_image()
+        #     if 'curframe' in info:
+        #         frame = info['curframe'] if ret else self.epochframes
+        return ret, frame, img, info
+
+    def run(self):
+        """ Read new image from stream """
+        ret, frame = True, -1
+        while ret and self.capture.isOpened() and not self.run_stop(frame):
             ret, img, info = self.get_image()
             if 'curframe' in info:
                 frame = info['curframe'] if ret else self.epochframes
-        return ret, frame, img, info
+            self.queue.put((ret, frame, img, info))
+
+            time.sleep(0.01 / self.fps if self.fps > 0 else 0.0001)
 
 
 class LiveVideoStream:
@@ -148,7 +173,7 @@ class LiveVideoStream:
         self.queue_maxsize = queue_maxsize
         self.queue = Queue(maxsize=self.queue_maxsize) if queue is None else queue
         self.disc_frame_thres = 5  # 5 times in read error
-        self.lost_internet_wait_sec = 60 * 15  # 15 minutes in seconds
+        self.lost_internet_wait_sec = 6 * 0.1  # 0.1 minutes in seconds
         self.queue_wait_sec = self.queue_maxsize * 16 * 0.5   # max 16 channels and tolerance second
 
         # Start the Process
@@ -163,8 +188,10 @@ class LiveVideoStream:
 
     def init(self):
         """ Initialize variables that will be used for live streaming. """
-        userinfo = "" if self.username == ' ' and self.password == ' ' else f"{self.username}:{self.password}"
-        self.rtsp_url = f"rtsp://{userinfo}@{self.ip}:{self.port}/{self.stream_name}"
+        userinfo = "" if self.username == ' ' and self.password == ' ' else f"{self.username}:{self.password}@"
+        port = "" if self.port == ' ' else f":{self.port}"
+        stream_name = "" if self.stream_name == ' ' else f"/{self.stream_name}"
+        self.rtsp_url = f"rtsp://{userinfo}{self.ip}{port}{stream_name}"
         self.stop_stream = False
         self.stop_signal = False
         self.fps = 0
@@ -392,7 +419,7 @@ class LiveVideoStream:
         try:
             ret, img, info = self.queue.get(block=True, timeout=self.lost_internet_wait_sec)
         except Exception:
-            self.stop()
+            self.stop(stop_stream=True)
             ret, img, info = False, None, {}
             logger.warning("Queue is empty!!")
         return ret, img, info
@@ -412,7 +439,7 @@ class LiveVideoStream:
                 break
             elif self.capture.isOpened():
                 # Get New Image
-                ret = self.process_image(fix=True)
+                _ = self.process_image(fix=True)
 
             elif not self.stop_stream:
                 # Camera Disconnected or Load LiveVideo Image Failed

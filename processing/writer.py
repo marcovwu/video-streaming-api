@@ -60,6 +60,10 @@ class VideoWriter:
     def _check_show(self, show, vis):
         return show and (vis == 'a' or vis == 's')
 
+    def adjust_size(self, width, height):
+        self.width, self.height = width, height
+        self._update_writer(self.date_time, self.start_time, is_need_new_writer=True)
+
     def plot_time_delay(self, img, sec):
         delay_ms = (time.time() - sec) * 1000
         color = [0, 0, 255] if delay_ms > 50 else [0, 255, 0]
