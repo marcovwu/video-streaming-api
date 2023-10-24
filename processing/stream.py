@@ -127,7 +127,7 @@ class VideoStream(Stream):
 
     def read(self, frame):
         """ Read new image from stream """
-        ret, frame, img, info = self.queue.get(timeout=5)
+        ret, frame, img, info = self.queue.get(timeout=10)
         if not ret:
             self.stop(stop_stream=True)
         # ret, img, info = False, None, {'sec': -1}
@@ -278,7 +278,14 @@ class LiveVideoStream:
     def read_image(self, fix=True):
         """ Read image from capture """
         while True:
-            ret, img = self.capture.read()
+            try:
+                ret, img = self.capture.read()
+            except cv2.error as e:
+                ret, img = False, None
+                logger.error("OpenCV exception: %s" % e)
+            except Exception as e:
+                ret, img = False, None
+                logger.error("PyThon exception: %s" % e)
 
             # cur information
             cur_real_sec = time.time()
