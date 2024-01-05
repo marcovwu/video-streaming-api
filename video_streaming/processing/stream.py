@@ -15,17 +15,23 @@ class Stream(ABC):
     VIDOE_DTFORMAT = '%Y/%m/%d %H:%M:%S'
 
     @classmethod
-    def load(cls, mode, video_path, div_fps, save_dir, video_sec=0, SYSDTFORMAT='', YMDFORMAT='', warn=True):
+    def load(
+        cls, mode, video_path, define, div_fps, save_dir, video_sec=0, SYSDTFORMAT='', YMDFORMAT='', warn=True
+    ):
+        cls.SYSDTFORMAT = SYSDTFORMAT
+        cls.YMDFORMAT = YMDFORMAT
         if cls != Stream:
             raise NotImplementedError("Subclasses must implement from_dict()")
         if mode == "video":
-            stream = VideoStream(video_path, div_fps, save_dir, SYSDTFORMAT=SYSDTFORMAT)
+            stream = VideoStream(video_path, define, div_fps, save_dir, SYSDTFORMAT=SYSDTFORMAT)
             # stream_thread = None
             stream_thread = Thread(target=stream.run, daemon=True)
         elif mode == "webcam":
             # TODO: maxsize
             stream = LiveVideoStream(
-                video_path, video_sec, div_fps, save_dir, SYSDTFORMAT, YMDFORMAT, queue_maxsize=10, warn=warn)
+                video_path, define, video_sec, div_fps, save_dir, SYSDTFORMAT, YMDFORMAT, queue_maxsize=10,
+                warn=warn
+            )
             stream_thread = Thread(target=stream.run, daemon=True)
         else:
             raise ValueError("Invalid shape type")
@@ -39,10 +45,12 @@ class Stream(ABC):
             return '20' + year_date_time
         return year_date_time
 
-    @abstractmethod
     def get_cur_info(self, cur_second):
         """ Get the time & sec in cur frame (second) """
-        pass
+        cur_date_time = datetime.fromtimestamp(cur_second).strftime(self.YMDFORMAT)
+        cur_time = datetime.fromtimestamp(cur_second).strftime(self.SYSDTFORMAT)
+        vid_time = datetime.fromtimestamp(cur_second).strftime(Stream.VIDOE_DTFORMAT)
+        return cur_date_time, cur_second, cur_time, vid_time
 
     @abstractmethod
     def stop(self, stop_stream=True):
@@ -66,16 +74,24 @@ class Stream(ABC):
 
 
 class VideoStream(Stream):
-    def __init__(self, source, div_fps=1, save_dir='', SYSDTFORMAT='%Y%m%d%H%M%S'):
+    def __init__(self, source, define, div_fps=1, save_dir='', SYSDTFORMAT='%Y%m%d%H%M%S'):
         # div path
+        for i in range(len(define['parent_folder'])):
+            if define['parent_folder'][-(i + 1)] is None:
+                define['parent_folder'][-(i + 1)] = source.split(os.sep)[-(i + 2)]
+
+        self.video_define = define
         self.save_dir = save_dir
         self.SYSDTFORMAT = SYSDTFORMAT
-        self.group = source.split(os.sep)[-4]
-        self.channel = source.split(os.sep)[-3]
-        self.date_time = source.split(os.sep)[-2]
-        self.save_folder = Path(os.path.join(self.save_dir, self.group, self.channel, self.date_time))
-        self.start_time = Stream.make_ydt('.'.join(os.path.basename(source).split('.')[:-1]))
-        self.start_sec = datetime.strptime(self.start_time, self.SYSDTFORMAT).timestamp()
+        self.save_folder = Path(os.path.join(self.save_dir, *define['parent_folder']))
+
+        if define['start_time'] == 'videoname':
+            self.start_time = Stream.make_ydt('.'.join(os.path.basename(source).split('.')[:-1]))
+            self.start_sec = datetime.strptime(self.start_time, self.SYSDTFORMAT).timestamp()
+        else:
+            self.start_sec = datetime.now().second
+            self.start_time = datetime.fromtimestamp(self.start_sec).strftime(self.SYSDTFORMAT)
+
         # init
         self.div_fps = div_fps
         self.stop_stream = False
@@ -88,12 +104,6 @@ class VideoStream(Stream):
         self.epochframes = self.maxframes
         self.infer_fps = self.fps // self.div_fps
         self.queue = Queue(maxsize=100)  # self.queue_maxsize) if queue is None else queue
-
-    def get_cur_info(self, cur_second):
-        """ Get the time & sec in cur frame (second) """
-        cur_time = datetime.fromtimestamp(cur_second).strftime(self.SYSDTFORMAT)
-        vid_time = datetime.fromtimestamp(cur_second).strftime(Stream.VIDOE_DTFORMAT)
-        return self.date_time, cur_second, cur_time, vid_time
 
     def stop(self, stop_stream=True):
         self.stop_stream = stop_stream
@@ -149,9 +159,10 @@ class VideoStream(Stream):
             time.sleep(0.01 / self.fps if self.fps > 0 else 0.0001)
 
 
-class LiveVideoStream:
+class LiveVideoStream(Stream):
     def __init__(
-        self, stream_info, video_sec, div_fps, save_dir, SYSDTFORMAT, YMDFORMAT, queue=None, queue_maxsize=10, warn=True
+        self, stream_info, stream_define, video_sec, div_fps, save_dir, SYSDTFORMAT, YMDFORMAT, queue=None,
+        queue_maxsize=10, warn=True
     ):
         # info
         self.ip = stream_info['ip']
@@ -257,13 +268,6 @@ class LiveVideoStream:
 
         # Put new information to queue
         self.queue.put((ret, img, {'sec': cur_real_sec, 'frame': cur_frame, 'curframe': cur_frame_id}))
-
-    def get_cur_info(self, cur_second):
-        """ Get the time & sec in cur frame (second) """
-        cur_date_time = datetime.fromtimestamp(cur_second).strftime(self.YMDFORMAT)
-        cur_time = datetime.fromtimestamp(cur_second).strftime(self.SYSDTFORMAT)
-        vid_time = datetime.fromtimestamp(cur_second).strftime(Stream.VIDOE_DTFORMAT)
-        return cur_date_time, cur_second, cur_time, vid_time
 
     def set_camera(self):
         if self.reconnection_attemps <= 0:

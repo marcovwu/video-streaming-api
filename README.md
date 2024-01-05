@@ -20,15 +20,15 @@ pip install video-streaming-api
 To use the API, first import the required modules:
 
 ```
-from video_streaming_api.runner import Runner
+from video_streaming_api.runner import StreamingRunner
 from video_streaming_api.strategy import ImageProcessingStrategy
 ```
 
-Then extend your own image processing strategies from `ImageProcessingStrategy` class and define your own processing flow. Create a `Runner` instance and specify the video source and processing strategies to use:
+Then extend your own image processing strategies from `ImageProcessingStrategy` class and define your own processing flow. Create a `StreamingRunner` instance and specify the video source and processing strategies to use:
 
 ```
 # init
-runner = Runner(
+streaming_runner = StreamingRunner(
     video_paths={
         0: {
             'ip': "192.168.66.28", 'port': "554", 'username': "Admin", 'password': "1234",
@@ -52,7 +52,7 @@ runner = Runner(
 )
 
 # main
-runner.run()
+streaming_runner.run()
 ```
 
 

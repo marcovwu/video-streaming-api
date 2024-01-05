@@ -17,7 +17,7 @@ class LoadBatchVideos:
     VID_FORMATS = 'asf', 'avi', 'gif', 'm4v', 'mkv', 'mov', 'mp4', 'mpeg', 'mpg', 'ts', 'wmv'
 
     def __init__(
-        self, path, vid_batch=1, div_fps=1, save_dir='', preproc=None, img_size=(640, 640), many_folder=False,
+        self, path, define, vid_batch=1, div_fps=1, save_dir='', preproc=None, img_size=(640, 640), many_folder=False,
         video_sec=70, vis_mode='write', SYSDTFORMAT='%Y%m%d%H%M%S', YMDFORMAT='%Y%m%d000000', visualizer=None
     ):
         # Initialize variables
@@ -29,11 +29,11 @@ class LoadBatchVideos:
         self.end_title = '\n------------------------------------------------' + (
             '\n' + '%20s' * 2) % ('Infer Time', 'Total Time')
         # get video paths
-        self.files = LoadBatchVideos.build_videos_dict(path, many_folder=many_folder)
+        self.files, self.defines = LoadBatchVideos.build_videos_dict(path, define, many_folder=many_folder)
 
         # Create video managers
         self.video_managers = VideoManagers.create(
-            self.files, div_fps, save_dir, vis_mode, video_sec=video_sec, visualizer=visualizer,
+            self.defines, self.files, div_fps, save_dir, vis_mode, video_sec=video_sec, visualizer=visualizer,
             end_title=self.end_title, SYSDTFORMAT=SYSDTFORMAT, YMDFORMAT=YMDFORMAT
         )
         self._init_from_manager()
@@ -57,8 +57,8 @@ class LoadBatchVideos:
         return [x for x in files if x.split('.')[-1].lower() in LoadBatchVideos.VID_FORMATS]
 
     @staticmethod
-    def build_videos_dict(path, many_folder=False):
-        files = {}
+    def build_videos_dict(path, define, many_folder=False):
+        files, defines = {}, {}
         if isinstance(path, list):
             for i, p in enumerate(path):
                 if isinstance(path, str):
@@ -66,10 +66,12 @@ class LoadBatchVideos:
                     files[i] = (p, many_folder)
                 else:
                     files[i] = p
+                defines[i] = define[i]
         else:
             p = str(Path(path).resolve())  # os-agnostic absolute path
             files[0] = LoadBatchVideos.get_video_paths(p, many_folder)
-        return files
+            defines[0] = define
+        return files, defines
 
     @staticmethod
     def frame_counter(curframe, epochframe):

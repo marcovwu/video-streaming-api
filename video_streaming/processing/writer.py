@@ -11,10 +11,11 @@ VIDFORMAT = {'.mp4': "mp4v"}
 
 class VideoWriter:
     def __init__(
-        self, save_dir, group, channel, date_time, start_time, runfps, width, height, init_writer=False,
+        self, save_dir, video_define, start_time, runfps, width, height, init_writer=False,
         vid_reload=False, title='', vid_format='.mp4', queue=None, queue_maxsize=200, visualizer=None
     ):
         self.save_dir = save_dir
+        self.video_define = video_define
         self.runfps = runfps
         self.width = width
         self.height = height
@@ -29,19 +30,16 @@ class VideoWriter:
         self.visualizer = visualizer
         self.queue_maxsize = queue_maxsize
         self.queue = Queue(maxsize=self.queue_maxsize) if queue is None else queue
-        self._update_writer(date_time, start_time, group=group, channel=channel, is_need_new_writer=init_writer)
+        self._update_writer(video_define, start_time, is_need_new_writer=init_writer)
 
-    def _init_writer_path(self, date_time, start_time, group='', channel=''):
-        self.group = group if group else self.group
-        self.channel = channel if channel else self.channel
-        self.date_time = date_time
+    def _init_writer_path(self, video_define, start_time):
         self.start_time = start_time
-        self.save_folder = os.path.join(self.save_dir, self.group, self.channel, self.date_time)
-        self.WINDOW_NAME = 'Live Video Streaming in %s' % os.path.join(self.save_dir, self.group, self.channel)
+        self.save_folder = os.path.join(self.save_dir, *video_define['parent_folder'])
+        self.WINDOW_NAME = 'Live Video Streaming in %s' % os.path.join(self.save_dir, *video_define['parent_folder'])
         self.save_path = os.path.join(self.save_folder, self.start_time + self.vid_format)
 
-    def _update_writer(self, date_time, start_time, group='', channel='', is_need_new_writer=True):
-        self._init_writer_path(date_time, start_time, group=group, channel=channel)
+    def _update_writer(self, video_define, start_time, is_need_new_writer=True):
+        self._init_writer_path(video_define, start_time)
         # Init New VideoWriter
         if is_need_new_writer:
             self.run_stop()
@@ -62,7 +60,7 @@ class VideoWriter:
 
     def adjust_size(self, width, height, init_video_writer=False):
         self.width, self.height = width, height
-        self._update_writer(self.date_time, self.start_time, is_need_new_writer=init_video_writer)
+        self._update_writer(self.video_define, self.start_time, is_need_new_writer=init_video_writer)
 
     def plot_time_delay(self, img, sec):
         delay_ms = (time.time() - sec) * 1000
@@ -97,11 +95,12 @@ class VideoWriter:
         return drop
 
     def write_image(self, im0, current_date_time, current_time):
+        # TODO: current_date_time
         if self.writer is None:
             if self.vid_reload or not self.already_init_writer:
                 if self.title:
                     logger.info('\n' + self.title)
-                self._update_writer(current_date_time, current_time, is_need_new_writer=True)
+                self._update_writer(self.video_define, current_time, is_need_new_writer=True)
             else:
                 return True
         # write

@@ -20,7 +20,7 @@ class VideoManagers:
         self.visualizer = visualizer
         # TODO: maxsize
         self.vid_writer = VideoWriter(
-            self.save_dir, stream.group, stream.channel, stream.date_time, stream.start_time, stream.infer_fps,
+            self.save_dir, stream.video_define, stream.start_time, stream.infer_fps,
             stream.width, stream.height, vid_reload=True if mode == 'webcam' else False, title=end_title,
             visualizer=self.visualizer
         )
@@ -61,22 +61,23 @@ class VideoManagers:
 
     @classmethod
     def create(
-        cls, video_paths: dict, div_fps, save_dir, vis_mode, video_sec=0,
+        cls, video_sources: dict, video_defines: dict, div_fps, save_dir, vis_mode, video_sec=0,
         visualizer=None, end_title='', SYSDTFORMAT='', YMDFORMAT='', warn=True
     ):
         """
         Args:
-            video_paths: {id: video_path}
+            video_infos: {id: ...} TODO
         """
-        for k, video_path in video_paths.items():
-            mode = cls.get_mode(video_path)
+        for k, video_source in video_sources.items():
+            video_define = video_defines[k]
+            mode = cls.get_mode(video_source)
             # check path
-            if isinstance(video_path, str) and (not video_path or not os.path.exists(video_path)):
+            if isinstance(video_source, str) and (not video_source or not os.path.exists(video_source)):
                 continue
 
             # load stream
             stream, stream_thread = Stream.load(
-                mode, video_path, div_fps, save_dir, video_sec=video_sec,
+                mode, video_source, video_define, div_fps, save_dir, video_sec=video_sec,
                 SYSDTFORMAT=SYSDTFORMAT, YMDFORMAT=YMDFORMAT, warn=warn
             )
 
@@ -96,6 +97,7 @@ if __name__ == '__main__':
             'ip': "192.168.66.28", 'port': "554", 'username': "Admin", 'password': "1234",
             'stream_name': "ch1", 'group': "TR", 'channel': 'Vivocam1'
         }},
+        {0: {"parent_folder": [None, None, None], "start_time": "videoname"}},
         div_fps=2, save_dir='', vis_mode='show', video_sec=600, visualizer=None, end_title='',
         SYSDTFORMAT='%Y%m%d%H%M%S', YMDFORMAT='%Y%m%d000000'
     )
