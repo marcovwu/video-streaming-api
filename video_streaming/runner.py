@@ -13,7 +13,7 @@ from processing.manager import VideoManagers
 from processing.strategy import OnlyShowStrategy
 
 
-class Runner:
+class StreamingRunner:
     def __init__(
         self, video_paths, vid_batch=1, div_fps=1, preproc=None, imgsz=(640, 640), save_dir='', vis_mode='write',
         video_sec=600, visualizer=None, end_title='', SYSDTFORMAT='%Y%m%d%H%M%S', YMDFORMAT='%Y%m%d000000',
@@ -90,13 +90,13 @@ class Runner:
 
             pbar.set_description(('%20.4f' * 2) % (sys_info['infer'], time.time() - sys_info['start']))
 
-        # close main infer thread
-        cv2.destroyAllWindows()
-
         # Stop the video manager
         time.sleep(1)
         for _, manager in self.dataset.video_managers.items():
-            Runner.stop_manager(manager)
+            StreamingRunner.stop_manager(manager)
+
+        # close main infer thread
+        cv2.destroyAllWindows()
 
     def process_image(self):
         # Show video streaming
@@ -128,13 +128,13 @@ class Runner:
                     cur_date_time, cur_second, cur_time, _ = manager.stream.get_cur_info(info['sec'])
                     manager.vid_writer.put_frame(img_info["img"], cur_date_time, cur_time, cur_second, vis='a')
 
-        # close main infer thread
-        cv2.destroyAllWindows()
-
         # Stop the video manager
         time.sleep(1)
         for _, manager in self.video_managers.items():
-            Runner.stop_manager(manager)
+            StreamingRunner.stop_manager(manager)
+
+        # close main infer thread
+        cv2.destroyAllWindows()
 
     def run(self):
         # Start process
@@ -152,7 +152,7 @@ class Runner:
 
 if __name__ == "__main__":
     # init
-    runner = Runner(
+    streaming_runner = StreamingRunner(
         video_paths={
             0: {
                 'ip': "192.168.200.140", 'port': " ", 'username': " ", 'password': " ",
@@ -176,4 +176,4 @@ if __name__ == "__main__":
     )
 
     # main
-    runner.run()
+    streaming_runner.run()

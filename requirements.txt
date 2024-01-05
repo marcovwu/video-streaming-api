@@ -1,0 +1,3 @@
+tqdm
+loguru
+opencv-python

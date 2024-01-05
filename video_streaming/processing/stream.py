@@ -127,7 +127,7 @@ class VideoStream(Stream):
 
     def read(self, frame):
         """ Read new image from stream """
-        ret, frame, img, info = self.queue.get(timeout=10)
+        ret, frame, img, info = self.queue.get(timeout=1)
         if not ret:
             self.stop(stop_stream=True)
         # ret, img, info = False, None, {'sec': -1}
