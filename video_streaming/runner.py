@@ -1,6 +1,7 @@
 import cv2
 import sys
 import time
+import copy
 
 from tqdm import tqdm
 from pathlib import Path
@@ -14,23 +15,28 @@ from processing.strategy import OnlyShowStrategy
 
 
 class StreamingRunner:
+    DEFINE_TEMPLATE = {"parent_folder": [], "start_time": "current"}
+
     def __init__(
-        self, video_paths, vid_batch=1, div_fps=1, preproc=None, imgsz=(640, 640), save_dir='', vis_mode='write',
-        video_sec=600, visualizer=None, end_title='', SYSDTFORMAT='%Y%m%d%H%M%S', YMDFORMAT='%Y%m%d000000',
-        warnning=True, start=False, processing_strategy=OnlyShowStrategy
+        self, video_sources, video_defines=None, vid_batch=1, div_fps=1, preproc=None, imgsz=(640, 640), save_dir='./',
+        vis_mode='write', video_sec=600, visualizer=None, end_title='', SYSDTFORMAT='%Y%m%d%H%M%S',
+        YMDFORMAT='%Y%m%d000000', warnning=True, start=False, processing_strategy=OnlyShowStrategy
     ):
-        if isinstance(video_paths, dict):
+        self.video_sources, self.video_defines = StreamingRunner.update_video_info(video_sources, video_defines)
+        if isinstance(self.video_sources, dict):
             # Create VideoManager
             self.dataset = None
             self.video_managers = VideoManagers.create(
-                video_paths, div_fps, save_dir, vis_mode, video_sec,
-                visualizer, end_title, SYSDTFORMAT, YMDFORMAT, warnning
+                self.video_sources, self.video_defines, div_fps, save_dir, vis_mode, video_sec=video_sec,
+                visualizer=visualizer, end_title=end_title, SYSDTFORMAT=SYSDTFORMAT, YMDFORMAT=YMDFORMAT,
+                warn=warnning
             )
         else:
             # Create Dataset
             self.dataset = LoadBatchVideos(
-                video_paths, vid_batch, div_fps, save_dir, preproc, img_size=imgsz, video_sec=video_sec,
-                vis_mode=vis_mode, SYSDTFORMAT=SYSDTFORMAT, YMDFORMAT=YMDFORMAT, visualizer=visualizer
+                self.video_sources, self.video_defines, vid_batch, div_fps, save_dir, preproc, img_size=imgsz,
+                video_sec=video_sec, vis_mode=vis_mode, SYSDTFORMAT=SYSDTFORMAT, YMDFORMAT=YMDFORMAT,
+                visualizer=visualizer
             )
             self.video_managers = None
         self.processing_strategy = processing_strategy
@@ -49,6 +55,19 @@ class StreamingRunner:
         if manager.vid_thread is not None and not manager.vid_writer.stop_flag:
             manager.vid_writer.put_frame(None, '', '', -1)
             manager.vid_thread.join()
+
+    @staticmethod
+    def update_video_info(video_sources, video_defines):
+        if video_defines is None:
+            if isinstance(video_sources, str):
+                video_defines = copy.deepcopy(StreamingRunner.DEFINE_TEMPLATE)
+            elif isinstance(video_sources, list):
+                video_defines = [copy.deepcopy(StreamingRunner.DEFINE_TEMPLATE) for _ in video_sources]
+            elif isinstance(video_sources, dict):
+                video_defines = {_id: copy.deepcopy(StreamingRunner.DEFINE_TEMPLATE) for _id in video_sources.keys()}
+            else:
+                logger.error("Error video source: %s !!" % video_sources)
+        return video_sources, video_defines
 
     def _start(self):
         # Start the video manager
@@ -153,17 +172,18 @@ class StreamingRunner:
 if __name__ == "__main__":
     # init
     streaming_runner = StreamingRunner(
-        video_paths={
+        video_sources={
             0: {
                 'ip': "192.168.200.140", 'port': " ", 'username': " ", 'password': " ",
                 'stream_name': "live2.sdp", 'group': "sdp", 'channel': 'live2'
             }
         },  # Dictionary that uses VideoManagers. List (["/path_to_your_video/...mp4", ...]) will use LoadBatchVideos.
+        video_defines={0: {"parent_folder": [None, None, None], "start_time": "current"}},
         vid_batch=1,  # Sets the batch in each stream.
         div_fps=1,  # Used to control inference FPS = original FPS / div_fps.
         preproc=None,  # Pre-processing Transformer for images.
         imgsz=(640, 640),  # Use to pre-process image to this size.
-        save_dir='',  # Used to write video in this format: /save_dir/group/channel/YMDFORMAT/SYSDTFORMAT.mp4
+        save_dir='./',  # Used to write video in this format: /save_dir/group/channel/YMDFORMAT/SYSDTFORMAT.mp4
         vis_mode='all',  # 'show': show video streaming in window, 'write': only write into output video, 'all': both.
         video_sec=600,  # Only used to record stream.video_sec and calculate stream.epochframes in real-time video.
         visualizer=None,  # A unique instance to show the video streaming.
