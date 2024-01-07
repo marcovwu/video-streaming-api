@@ -30,16 +30,18 @@ class VideoWriter:
         self.visualizer = visualizer
         self.queue_maxsize = queue_maxsize
         self.queue = Queue(maxsize=self.queue_maxsize) if queue is None else queue
-        self._update_writer(video_define, start_time, is_need_new_writer=init_writer)
+        self._update_writer(start_time, is_need_new_writer=init_writer)
 
-    def _init_writer_path(self, video_define, start_time):
+    def _init_writer_path(self, start_time):
         self.start_time = start_time
-        self.save_folder = os.path.join(self.save_dir, *video_define['parent_folder'])
-        self.WINDOW_NAME = 'Live Video Streaming in %s' % os.path.join(self.save_dir, *video_define['parent_folder'])
+        self.save_folder = os.path.join(self.save_dir, *self.video_define['parent_folder'])
+        self.save_folder = self.save_folder if len(self.save_folder) else './'
         self.save_path = os.path.join(self.save_folder, self.start_time + self.vid_format)
+        self.WINDOW_NAME = 'Live Video Streaming in %s' % self.save_path
 
-    def _update_writer(self, video_define, start_time, is_need_new_writer=True):
-        self._init_writer_path(video_define, start_time)
+    def _update_writer(self, start_time, current_date_time="", is_need_new_writer=True):
+        # TODO: update new date folder into save_folder when is_need_new_writer is True
+        self._init_writer_path(start_time)
         # Init New VideoWriter
         if is_need_new_writer:
             self.run_stop()
@@ -60,7 +62,7 @@ class VideoWriter:
 
     def adjust_size(self, width, height, init_video_writer=False):
         self.width, self.height = width, height
-        self._update_writer(self.video_define, self.start_time, is_need_new_writer=init_video_writer)
+        self._update_writer(self.start_time, is_need_new_writer=init_video_writer)
 
     def plot_time_delay(self, img, sec):
         delay_ms = (time.time() - sec) * 1000
@@ -95,12 +97,11 @@ class VideoWriter:
         return drop
 
     def write_image(self, im0, current_date_time, current_time):
-        # TODO: current_date_time
         if self.writer is None:
             if self.vid_reload or not self.already_init_writer:
                 if self.title:
                     logger.info('\n' + self.title)
-                self._update_writer(self.video_define, current_time, is_need_new_writer=True)
+                self._update_writer(current_time, current_date_time=current_date_time, is_need_new_writer=True)
             else:
                 return True
         # write

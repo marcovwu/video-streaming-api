@@ -75,21 +75,21 @@ class Stream(ABC):
 
 class VideoStream(Stream):
     def __init__(self, source, define, div_fps=1, save_dir='', SYSDTFORMAT='%Y%m%d%H%M%S'):
-        # div path
+        # process parent folder
         for i in range(len(define['parent_folder'])):
             if define['parent_folder'][-(i + 1)] is None:
                 define['parent_folder'][-(i + 1)] = source.split(os.sep)[-(i + 2)]
-
         self.video_define = define
+
         self.save_dir = save_dir
         self.SYSDTFORMAT = SYSDTFORMAT
-        self.save_folder = Path(os.path.join(self.save_dir, *define['parent_folder']))
-
-        if define['start_time'] == 'videoname':
+        self.save_folder = Path(os.path.join(self.save_dir, *self.video_define['parent_folder']))
+        # TODO: datetime> datetime.mp4, current > current.mp4, videoname > videoname.mp4
+        if self.video_define['start_time'] == 'datetime':
             self.start_time = Stream.make_ydt('.'.join(os.path.basename(source).split('.')[:-1]))
             self.start_sec = datetime.strptime(self.start_time, self.SYSDTFORMAT).timestamp()
         else:
-            self.start_sec = datetime.now().second
+            self.start_sec = time.time()
             self.start_time = datetime.fromtimestamp(self.start_sec).strftime(self.SYSDTFORMAT)
 
         # init
@@ -165,6 +165,8 @@ class LiveVideoStream(Stream):
         queue_maxsize=10, warn=True
     ):
         # info
+        stream_define['parent_folder'] = [stream_info['group'], stream_info['channel']]
+        self.video_define = stream_define
         self.ip = stream_info['ip']
         self.port = stream_info['port']
         self.stream_name = stream_info['stream_name']

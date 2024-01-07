@@ -66,13 +66,17 @@ class VideoManagers:
     ):
         """
         Args:
-            video_infos: {id: ...} TODO
+            video_sources: {id: "video path"} TODO
+            video_defines: {id: {"parent_folder": [None, ...], "start_time": "current"}}
         """
+        initialized_video_source = set()
         for k, video_source in video_sources.items():
             video_define = video_defines[k]
             mode = cls.get_mode(video_source)
             # check path
-            if isinstance(video_source, str) and (not video_source or not os.path.exists(video_source)):
+            if str(video_source) in initialized_video_source or (
+                isinstance(video_source, str) and (not video_source or not os.path.exists(video_source))
+            ):
                 continue
 
             # load stream
@@ -80,6 +84,7 @@ class VideoManagers:
                 mode, video_source, video_define, div_fps, save_dir, video_sec=video_sec,
                 SYSDTFORMAT=SYSDTFORMAT, YMDFORMAT=YMDFORMAT, warn=warn
             )
+            initialized_video_source.add(str(video_source))
 
             # check stream was opened
             if not stream.capture.isOpened():

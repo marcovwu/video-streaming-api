@@ -33,7 +33,7 @@ class LoadBatchVideos:
 
         # Create video managers
         self.video_managers = VideoManagers.create(
-            self.defines, self.files, div_fps, save_dir, vis_mode, video_sec=video_sec, visualizer=visualizer,
+            self.files, self.defines, div_fps, save_dir, vis_mode, video_sec=video_sec, visualizer=visualizer,
             end_title=self.end_title, SYSDTFORMAT=SYSDTFORMAT, YMDFORMAT=YMDFORMAT
         )
         self._init_from_manager()
@@ -58,19 +58,21 @@ class LoadBatchVideos:
 
     @staticmethod
     def build_videos_dict(path, define, many_folder=False):
-        files, defines = {}, {}
-        if isinstance(path, list):
-            for i, p in enumerate(path):
-                if isinstance(path, str):
-                    p = str(Path(p).resolve())  # os-agnostic absolute path
-                    files[i] = (p, many_folder)
-                else:
-                    files[i] = p
-                defines[i] = define[i]
-        else:
+        # process str
+        if not isinstance(path, list):
             p = str(Path(path).resolve())  # os-agnostic absolute path
-            files[0] = LoadBatchVideos.get_video_paths(p, many_folder)
-            defines[0] = define
+            path = LoadBatchVideos.get_video_paths(p, many_folder)
+            define = [define for _ in path]
+
+        # build
+        files, defines = {}, {}
+        for i, p in enumerate(path):
+            if isinstance(path, str):
+                p = str(Path(p).resolve())  # os-agnostic absolute path
+                files[i] = (p, many_folder)
+            else:
+                files[i] = p
+            defines[i] = define[i]
         return files, defines
 
     @staticmethod
@@ -101,9 +103,9 @@ class LoadBatchVideos:
         self.batch = len(self.video_managers)
 
         # setting the title for show
-        self.title = ('\n' + '%15s' * 3) % ('Group', 'Channel', 'Video')
+        self.title = ('\n' + '%15s' * 2) % ('Parrent Folder', 'Video')
         for _, m in self.video_managers.items():
-            self.title += ('\n' + '%15s' * 3) % (m.stream.group, m.stream.channel, m.vid_writer.start_time)
+            self.title += ('\n' + '%15s' * 2) % (os.path.join(*m.stream.video_define), m.vid_writer.start_time)
 
     def _update_epoch(self, k, manager):
         epoch = int(self.frames[k] / manager.stream.epochframes)
