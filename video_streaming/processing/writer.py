@@ -12,16 +12,18 @@ VIDFORMAT = {'.mp4': "mp4v"}
 class VideoWriter:
     def __init__(
         self, save_dir, video_define, start_time, runfps, width, height, init_writer=False,
-        vid_reload=False, title='', vid_format='.mp4', queue=None, queue_maxsize=200, visualizer=None
+        vid_reload=False, title='', vid_format='.mp4', queue=None, queue_maxsize=200, visualizer=None, keepname=False
     ):
         self.save_dir = save_dir
         self.video_define = video_define
+        self.start_time = start_time
         self.runfps = runfps
         self.width = width
         self.height = height
         self.vid_format = vid_format
         self.title = title
         self.vid_reload = vid_reload
+        self.keepname = keepname
         # init
         self.writer = None
         self.already_init_writer = init_writer
@@ -33,11 +35,11 @@ class VideoWriter:
         self._update_writer(start_time, is_need_new_writer=init_writer)
 
     def _init_writer_path(self, start_time):
-        self.start_time = start_time
+        self.start_time = start_time if not self.keepname else self.start_time
         self.save_folder = os.path.join(self.save_dir, *self.video_define['parent_folder'])
         self.save_folder = self.save_folder if len(self.save_folder) else './'
         self.save_path = os.path.join(self.save_folder, self.start_time + self.vid_format)
-        self.WINDOW_NAME = 'Live Video Streaming in %s' % self.save_path
+        self.WINDOW_NAME = 'Process Video Streaming in %s' % self.save_path
 
     def _update_writer(self, start_time, current_date_time="", is_need_new_writer=True):
         # TODO: update new date folder into save_folder when is_need_new_writer is True

@@ -22,7 +22,7 @@ class VideoManagers:
         self.vid_writer = VideoWriter(
             self.save_dir, stream.video_define, stream.start_time, stream.infer_fps,
             stream.width, stream.height, vid_reload=True if mode == 'webcam' else False, title=end_title,
-            visualizer=self.visualizer
+            visualizer=self.visualizer, keepname=False if mode == 'webcam' else stream.video_define['start_time']
         )
         # vis mode thread
         if self.vis_mode == 'write':

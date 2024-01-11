@@ -84,10 +84,13 @@ class VideoStream(Stream):
         self.save_dir = save_dir
         self.SYSDTFORMAT = SYSDTFORMAT
         self.save_folder = Path(os.path.join(self.save_dir, *self.video_define['parent_folder']))
-        # TODO: datetime> datetime.mp4, current > current.mp4, videoname > videoname.mp4
+        # datetime> datetime.mp4, current > current.mp4, videoname > videoname.mp4
         if self.video_define['start_time'] == 'datetime':
             self.start_time = Stream.make_ydt('.'.join(os.path.basename(source).split('.')[:-1]))
             self.start_sec = datetime.strptime(self.start_time, self.SYSDTFORMAT).timestamp()
+        elif self.video_define['start_time'] == 'videoname':
+            self.start_sec = time.time()
+            self.start_time = '.'.join(os.path.basename(source).split('.')[:-1])
         else:
             self.start_sec = time.time()
             self.start_time = datetime.fromtimestamp(self.start_sec).strftime(self.SYSDTFORMAT)

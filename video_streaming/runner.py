@@ -15,7 +15,7 @@ from processing.strategy import OnlyShowStrategy
 
 
 class StreamingRunner:
-    DEFINE_TEMPLATE = {"parent_folder": [], "start_time": "current"}
+    DEFINE_TEMPLATE = {"parent_folder": [], "start_time": "videoname"}
 
     def __init__(
         self, video_sources, video_defines=None, vid_batch=1, div_fps=1, preproc=None, imgsz=(640, 640), save_dir='./',

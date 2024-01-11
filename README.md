@@ -69,10 +69,10 @@ If multiple video sources share the same configuration, you can modify the `DEFI
 
 ```python
 # Define a base template for video configuration.
-# Video Defines:
+# Video Defines: default is []
 #   - If parent_folder is [None, None], the save_folder will automatically read the source directory.
 #   - If video_source is 'your_dir/abc/def/videoname.mp4', save_folder will be 'save_dir/abc/def'.
-#   - Start time choices:
+#   - Start time choices: defautl is 'videoname'
 #     - 'current': use the current time and SYSDTFORMAT as the video name.
 #     - 'datetime': use the video source's video name as datetime.
 #     - 'videoname': directly use the video name as the video name.
