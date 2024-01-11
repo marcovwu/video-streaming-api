@@ -19,14 +19,14 @@ pip install video-streaming-api
 
 To use the API, first import the required modules:
 
-### 1. Import Required Modules
+### Import Required Modules
 
 ```python
 from video_streaming.runner import StreamingRunner
 from video_streaming.processing.strategy import ImageProcessingStrategy
 ```
 
-### 2. Define Video Sources
+### Define Video Sources
 Define the video sources with their respective configurations:
 ```python
 # Example1: Dictionary that uses VideoManagers.
@@ -60,11 +60,11 @@ video_sources = [
 ]
 ```
 
-### 3 Define Video Configuration
+### (Optional) Define Video Configuration
 
 Choose one of the following approaches:
 
-#### 3.1 Using Base Template
+#### 1. Using Base Template
 If multiple video sources share the same configuration, you can modify the `DEFINE_TEMPLATE` in `StreamingRunner` as a base:
 
 ```python
@@ -88,7 +88,7 @@ video_defines = {
 }
 ```
 
-#### 3.2 Directly Define Configurations
+#### 2. Directly Define Configurations
 Alternatively, you can directly define video_defines to align the configurations with each video source in the video_sources dictionary.
 ```python
 video_defines = {
@@ -98,7 +98,7 @@ video_defines = {
 }
 ```
 
-### 4. Initialize Streaming Runner
+### Streaming Runner
 Then extend your own image processing strategies from `ImageProcessingStrategy` class and define your own processing flow. Create a `StreamingRunner` instance and specify the video source and processing strategies to use:
 ```python
 # Initialize
