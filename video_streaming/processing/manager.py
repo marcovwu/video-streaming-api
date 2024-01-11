@@ -41,11 +41,8 @@ class VideoManagers:
         mode = 'video' if isinstance(video_path, list) or isinstance(video_path, str) else 'webcam'
         return mode
 
-    def stop(self, stop_stream=False):
-        if self.mode == 'video':
-            self.stream.stop(stop_stream)
-        else:
-            self.stream.stop_signal = True
+    def stop(self):
+        self.stream.stop_signal = True
 
         if self.vid_writer is not None and not self.vid_writer.stop_flag:
             self.vid_writer.put_frame(None, '', '', -1)
@@ -133,7 +130,7 @@ if __name__ == '__main__':
             """
             # TODO: you can set stop rules by yourself
             if manager.vid_writer.stop_flag:
-                manager.stop(stop_stream=True)
+                manager.stop()
                 continue
 
             # show
@@ -142,7 +139,7 @@ if __name__ == '__main__':
 
     # Stop the video manager
     for k, manager in video_managers.items():
-        manager.stop(stop_stream=True)
+        manager.stop()
         if not manager.vid_writer.stop_flag:
             manager.vid_writer.put_frame(None, '', '', -1)
             manager.vid_thread.join()
