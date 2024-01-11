@@ -187,7 +187,7 @@ class StreamingRunner:
         self.stop_flag = True
 
 
-if __name__ == "__main__":
+def Example():
     # init
     StreamingRunner.DEFINE_TEMPLATE = {"parent_folder": [None, None, None], "start_time": "current"}
     streaming_runner = StreamingRunner(
@@ -224,3 +224,7 @@ if __name__ == "__main__":
 
     # main
     streaming_runner.run()
+
+
+if __name__ == "__main__":
+    Example()
