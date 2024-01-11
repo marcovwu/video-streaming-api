@@ -63,7 +63,7 @@ class Stream(ABC):
         pass
 
     @abstractmethod
-    def get_image(self):
+    def read_image(self):
         """ Capture new image from stream """
         pass
 
@@ -93,8 +93,10 @@ class VideoStream(Stream):
             self.start_time = datetime.fromtimestamp(self.start_sec).strftime(self.SYSDTFORMAT)
 
         # init
+        self.read_times_thres = 10
         self.div_fps = div_fps
         self.stop_stream = False
+        self.stop_signal = False
         self.cur_frame_id = 0
         self.capture = cv2.VideoCapture(source)
         self.fps = self.capture.get(cv2.CAP_PROP_FPS)
@@ -126,12 +128,13 @@ class VideoStream(Stream):
             return True
         return False
 
-    def get_image(self):
-        ret = True
-        while ret:
+    def read_image(self):
+        ret, t = True, 0
+        while t < self.read_times_thres:
+            t += 1
             ret, img = self.capture.read()
             self.cur_frame_id += 1
-            if self.cur_frame_id % self.div_fps == 0:
+            if ret and self.cur_frame_id % self.div_fps == 0:
                 break
         return ret, img, {'sec': self.start_sec + (self.cur_frame_id / self.fps), 'curframe': self.cur_frame_id}
 
@@ -139,24 +142,22 @@ class VideoStream(Stream):
         """ Read new image from stream """
         ret, frame, img, info = self.queue.get(timeout=1)
         if not ret:
-            self.stop(stop_stream=True)
-        # ret, img, info = False, None, {'sec': -1}
-        # while img is None and self.capture.isOpened() and not self.run_stop(frame):
-        #     ret, img, info = self.get_image()
-        #     if 'curframe' in info:
-        #         frame = info['curframe'] if ret else self.epochframes
+            self.stop_signal = True
         return ret, frame, img, info
 
     def run(self):
         """ Read new image from stream """
         ret, frame = True, -1
-        while ret and self.capture.isOpened() and not self.run_stop(frame):
-            ret, img, info = self.get_image()
+        while not self.stop_signal and ret and self.capture.isOpened() and not self.run_stop(frame):
+            ret, img, info = self.read_image()
             if 'curframe' in info:
                 frame = info['curframe'] if ret else self.epochframes
             self.queue.put((ret, frame, img, info))
 
             time.sleep(0.01 / self.fps if self.fps > 0 else 0.0001)
+
+        # Stop Stream Process
+        self.stop(stop_stream=True)
 
 
 class LiveVideoStream(Stream):

@@ -100,6 +100,7 @@ class LoadBatchVideos:
         return imgs_info
 
     def _init_from_manager(self):
+        self.stop_signals = {k: False for k in self.video_managers.keys()}
         self.batch = len(self.video_managers)
 
         # setting the title for show
@@ -117,8 +118,9 @@ class LoadBatchVideos:
         else:
             manager.epoch = {'e': epoch, 'n': False, 'f': False}
 
-    def stop(self, k, stop_stream=False):
-        self.video_managers[k].stop(stop_stream=stop_stream)
+    def stop(self, k):
+        self.stop_signals[k] = True
+        self.video_managers[k].stop()
 
     def __iter__(self):
         self.frames = {}
@@ -135,15 +137,17 @@ class LoadBatchVideos:
         return self
 
     def __next__(self):
-        if self.batch == 0 or all([m.stream.stop_stream for m in self.video_managers.values()]):
+        if self.batch == 0 or all([self.stop_signals[k] for k in self.video_managers.keys()]):
             raise StopIteration
 
         img0s, imgs, stream_info = [], None, []
         for k, manager in self.video_managers.items():
-            if manager.stream.capture.isOpened():
+            if not self.stop_signals[k]:
                 for _ in range(self.vid_batch):
                     # Load Image
                     ret, self.frames[k], img, info = manager.stream.read(self.frames[k])
+                    if not len(info):
+                        self.stop_signals[k] = True
                     if not ret or img is None:
                         continue
 

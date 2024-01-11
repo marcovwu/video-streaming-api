@@ -50,8 +50,12 @@ class TestStreaming(unittest.TestCase):
                     0: {
                         'ip': "zephyr.rtsp.stream", 'port': " ", 'username': " ", 'password': " ",
                         'stream_name': "pattern?streamKey=87a01fc49801f9771ecd0bb7666d6c04", 'group': "out",
-                        'channel': 'debug'
-                        
+                        'channel': 'ch1'
+                    },  # rtsp://zephyr.rtsp.stream/pattern?streamKey=87a01fc49801f9771ecd0bb7666d6c04
+                    1: {
+                        'ip': "zephyr.rtsp.stream", 'port': " ", 'username': " ", 'password': " ",
+                        'stream_name': "pattern?streamKey=87a01fc49801f9771ecd0bb7666d6c04", 'group': "out",
+                        'channel': 'ch2'
                     }  # rtsp://zephyr.rtsp.stream/pattern?streamKey=87a01fc49801f9771ecd0bb7666d6c04
                 },
                 vid_batch=1, div_fps=1, preproc=None, imgsz=(640, 640), save_dir='./', vis_mode='all', video_sec=600,

@@ -50,7 +50,7 @@ class StreamingRunner:
 
     @staticmethod
     def stop_manager(manager):
-        manager.stop(stop_stream=True)
+        manager.stop()
         manager.stream_thread.join()
         if manager.vid_thread is not None and not manager.vid_writer.stop_flag:
             manager.vid_writer.put_frame(None, '', '', -1)
@@ -99,7 +99,7 @@ class StreamingRunner:
                 output = outputs[i] if i <= len(outputs) - 1 else None
                 w = self.processing_strategy.process_image(manager, (img_info, imgs[i], output))
                 if self.processing_strategy.check_stop(manager, img_info):
-                    manager.stop(stop_stream=True)
+                    manager.stop()
                     continue
 
                 # show
@@ -139,7 +139,7 @@ class StreamingRunner:
                 # processing image and show output information in image
                 w = self.processing_strategy.process_image(manager, (ret, frames[k], img_info, info, output))
                 if self.processing_strategy.check_stop(manager, info):
-                    manager.stop(stop_stream=True)
+                    manager.stop()
                     continue
 
                 # show
