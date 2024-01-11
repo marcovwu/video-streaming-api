@@ -120,6 +120,7 @@ streaming_runner = StreamingRunner(
     YMDFORMAT='%Y%m%d000000',  # Used to name the date_time folder.
     warnning=True,  # Show warnings in the terminal. Set to False to skip showing information.
     start=False,  # Automatically start capturing images from video streaming after successful initialization.
+    close_prev_window=True,  # Close previous window when new window be opened.
     processing_strategy=OnlyShowStrategy  # Create strategy instance by extending the ImageProcessingStrategy class.
 )
 

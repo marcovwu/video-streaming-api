@@ -12,7 +12,8 @@ VIDFORMAT = {'.mp4': "mp4v"}
 class VideoWriter:
     def __init__(
         self, save_dir, video_define, start_time, runfps, width, height, init_writer=False, vid_reload=False, title='',
-        vid_format='.mp4', queue=None, queue_maxsize=200, visualizer=None, keepdate=False, keepname=False
+        vid_format='.mp4', queue=None, queue_maxsize=200, visualizer=None, keepdate=False, keepname=False,
+        close_prev_window=True
     ):
         self.save_dir = save_dir
         self.video_define = video_define
@@ -26,6 +27,9 @@ class VideoWriter:
         self.keepdate = keepdate
         self.keepname = keepname
         # init
+        self.close_prev_window = close_prev_window
+        self.WINDOW_NAME = None
+        self.CUR_WINDOW_NAME = self.WINDOW_NAME
         self.writer = None
         self.already_init_writer = init_writer
         self.stop_flag = True
@@ -42,10 +46,13 @@ class VideoWriter:
                 self.video_define['parent_folder'][-1] = current_date_time
             else:
                 self.video_define['parent_folder'] = [current_date_time]
-        self.save_folder = os.path.join(self.save_dir, *self.video_define['parent_folder'])
+        self.save_folder = os.path.join(
+            self.save_dir, *[f for f in self.video_define['parent_folder'] if f is not None])
         self.save_folder = self.save_folder if len(self.save_folder) else './'
         self.save_path = os.path.join(self.save_folder, self.start_time + self.vid_format)
         self.WINDOW_NAME = 'Process Video Streaming in %s' % self.save_path
+        if self.close_prev_window and self.CUR_WINDOW_NAME is not None and self.CUR_WINDOW_NAME != self.WINDOW_NAME:
+            cv2.destroyWindow(self.CUR_WINDOW_NAME)
 
     def _update_writer(self, start_time, current_date_time="", is_need_new_writer=True):
         self._init_writer_path(start_time, current_date_time=current_date_time)
@@ -121,6 +128,7 @@ class VideoWriter:
         if self.visualizer is None:
             self.internal_show = True
             cv2.imshow(self.WINDOW_NAME, im0)
+            self.CUR_WINDOW_NAME = self.WINDOW_NAME
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 return True
         else:

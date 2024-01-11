@@ -10,7 +10,10 @@ from .writer import VideoWriter
 class VideoManagers:
     _instances = {}
 
-    def __init__(self, mode, vis_mode, stream, stream_thread, save_dir, visualizer, end_title, vid_queue_maxsize=200):
+    def __init__(
+        self, mode, vis_mode, stream, stream_thread, save_dir, visualizer, end_title, vid_queue_maxsize=200,
+        close_prev_window=True
+    ):
         # update parameters
         self.mode = mode
         self.vis_mode = vis_mode
@@ -23,7 +26,8 @@ class VideoManagers:
             stream.width, stream.height, vid_reload=True if mode == 'webcam' else False, title=end_title,
             queue_maxsize=vid_queue_maxsize, visualizer=self.visualizer,
             keepdate=False if mode == 'webcam' else stream.video_define['start_time'] == 'videoname',
-            keepname=False if mode == 'webcam' else stream.video_define['start_time'] == 'videoname'
+            keepname=False if mode == 'webcam' else stream.video_define['start_time'] == 'videoname',
+            close_prev_window=close_prev_window
         )
         # vis mode thread
         if self.vis_mode == 'write':
@@ -60,7 +64,8 @@ class VideoManagers:
     @classmethod
     def create(
         cls, video_sources: dict, video_defines: dict, div_fps, save_dir, vis_mode, video_sec=0,
-        visualizer=None, end_title='', SYSDTFORMAT='', YMDFORMAT='', warn=True, queue_maxsize=10, vid_queue_maxsize=200
+        visualizer=None, end_title='', SYSDTFORMAT='', YMDFORMAT='', warn=True, queue_maxsize=10, vid_queue_maxsize=200,
+        close_prev_window=True
     ):
         """
         Args:
@@ -91,7 +96,7 @@ class VideoManagers:
             # get manager
             cls._instances[k] = VideoManagers(
                 mode, vis_mode, stream, stream_thread, save_dir, visualizer, end_title,
-                vid_queue_maxsize=vid_queue_maxsize
+                vid_queue_maxsize=vid_queue_maxsize, close_prev_window=close_prev_window
             )
         return cls._instances
 

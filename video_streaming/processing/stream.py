@@ -173,7 +173,7 @@ class LiveVideoStream(Stream):
         queue_maxsize=10, warn=True
     ):
         # info
-        stream_define['parent_folder'] = [stream_info['group'], stream_info['channel']]
+        stream_define['parent_folder'] = [stream_info['group'], stream_info['channel'], None]
         self.video_define = stream_define
         self.ip = stream_info['ip']
         self.port = stream_info['port']

@@ -18,7 +18,8 @@ class LoadBatchVideos:
 
     def __init__(
         self, path, define, vid_batch=1, div_fps=1, save_dir='', preproc=None, img_size=(640, 640), many_folder=False,
-        video_sec=70, vis_mode='write', SYSDTFORMAT='%Y%m%d%H%M%S', YMDFORMAT='%Y%m%d000000', visualizer=None
+        video_sec=70, vis_mode='write', SYSDTFORMAT='%Y%m%d%H%M%S', YMDFORMAT='%Y%m%d000000', visualizer=None,
+        queue_maxsize=10, vid_queue_maxsize=200, close_prev_window=True
     ):
         # Initialize variables
         self.div_fps = div_fps
@@ -34,7 +35,8 @@ class LoadBatchVideos:
         # Create video managers
         self.video_managers = VideoManagers.create(
             self.files, self.defines, div_fps, save_dir, vis_mode, video_sec=video_sec, visualizer=visualizer,
-            end_title=self.end_title, SYSDTFORMAT=SYSDTFORMAT, YMDFORMAT=YMDFORMAT
+            end_title=self.end_title, SYSDTFORMAT=SYSDTFORMAT, YMDFORMAT=YMDFORMAT, queue_maxsize=queue_maxsize,
+            vid_queue_maxsize=vid_queue_maxsize, close_prev_window=close_prev_window
         )
         self._init_from_manager()
 

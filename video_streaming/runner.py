@@ -20,7 +20,7 @@ class StreamingRunner:
     def __init__(
         self, video_sources, video_defines=None, vid_batch=1, div_fps=1, preproc=None, imgsz=(640, 640), save_dir='./',
         vis_mode='write', queue_maxsize=10, vid_queue_maxsize=200, video_sec=600, visualizer=None, end_title='',
-        SYSDTFORMAT='%Y%m%d%H%M%S', YMDFORMAT='%Y%m%d000000', warnning=True, start=False,
+        SYSDTFORMAT='%Y%m%d%H%M%S', YMDFORMAT='%Y%m%d000000', warnning=True, start=False, close_prev_window=True,
         processing_strategy=OnlyShowStrategy
     ):
         self.video_sources, self.video_defines = StreamingRunner.update_video_info(video_sources, video_defines)
@@ -30,14 +30,16 @@ class StreamingRunner:
             self.video_managers = VideoManagers.create(
                 self.video_sources, self.video_defines, div_fps, save_dir, vis_mode, video_sec=video_sec,
                 visualizer=visualizer, end_title=end_title, SYSDTFORMAT=SYSDTFORMAT, YMDFORMAT=YMDFORMAT,
-                warn=warnning, queue_maxsize=queue_maxsize, vid_queue_maxsize=vid_queue_maxsize
+                warn=warnning, queue_maxsize=queue_maxsize, vid_queue_maxsize=vid_queue_maxsize,
+                close_prev_window=close_prev_window
             )
         else:
             # Create Dataset
             self.dataset = LoadBatchVideos(
                 self.video_sources, self.video_defines, vid_batch, div_fps, save_dir, preproc, img_size=imgsz,
                 video_sec=video_sec, vis_mode=vis_mode, SYSDTFORMAT=SYSDTFORMAT, YMDFORMAT=YMDFORMAT,
-                visualizer=visualizer
+                visualizer=visualizer, queue_maxsize=queue_maxsize, vid_queue_maxsize=vid_queue_maxsize,
+                close_prev_window=close_prev_window
             )
             self.video_managers = None
         self.processing_strategy = processing_strategy
@@ -78,6 +80,20 @@ class StreamingRunner:
         self.stop_flag = False
         self.is_need_start = False
 
+    def write_video(self, manager, result_frame, img_info):
+        if manager.vid_writer.stop_flag:
+            self.predictor_stop_flag[img_info["id"]] = True
+            return
+        vid_info = img_info["dt"], img_info["cur_time"], img_info["cur_sec"]
+        # Init VideoWriter in new epoch
+        if img_info["is_newepoch"]:
+            manager.vid_writer.put_frame(None, *vid_info)
+        # Current Result
+        manager.vid_writer.put_frame(result_frame, *vid_info)
+        # Stop VideoWrite in last frames
+        if img_info["is_epochfinal"]:
+            manager.vid_writer.put_frame(None, *vid_info)
+
     def process_batch_images(self):
         # Iter video streaming
         pbar = tqdm(enumerate(self.dataset), total=None if any([
@@ -105,8 +121,9 @@ class StreamingRunner:
 
                 # show
                 if w and manager.vid_thread is not None:
-                    cur_date_time, cur_second, cur_time, _ = manager.stream.get_cur_info(img_info['cur_sec'])
-                    manager.vid_writer.put_frame(img_info["raw_img"], cur_date_time, cur_time, cur_second, vis='a')
+                    self.write_video(manager, img_info["raw_img"], img_info)
+                    # cur_date_time, cur_second, cur_time, _ = manager.stream.get_cur_info(img_info['cur_sec'])
+                    # manager.vid_writer.put_frame(img_info["raw_img"], cur_date_time, cur_time, cur_second, vis='a')
 
             pbar.set_description(('%20.4f' * 2) % (sys_info['infer'], time.time() - sys_info['start']))
 
@@ -172,14 +189,20 @@ class StreamingRunner:
 
 if __name__ == "__main__":
     # init
+    StreamingRunner.DEFINE_TEMPLATE = {"parent_folder": [None, None, None], "start_time": "current"}
     streaming_runner = StreamingRunner(
-        video_sources={
-            0: {
-                'ip': "192.168.200.140", 'port': " ", 'username': " ", 'password': " ",
-                'stream_name': "live2.sdp", 'group': "sdp", 'channel': 'live2'
-            }
-        },  # Dictionary that uses VideoManagers. List (["/path_to_your_video/...mp4", ...]) will use LoadBatchVideos.
-        video_defines={0: {"parent_folder": [None, None, None], "start_time": "current"}},
+        video_sources=[
+            {
+                'ip': "zephyr.rtsp.stream", 'port': " ", 'username': " ", 'password': " ",
+                'stream_name': "pattern?streamKey=87a01fc49801f9771ecd0bb7666d6c04", 'group': "out",
+                'channel': 'ch1'
+            },  # rtsp://zephyr.rtsp.stream/pattern?streamKey=87a01fc49801f9771ecd0bb7666d6c04
+            {
+                'ip': "zephyr.rtsp.stream", 'port': " ", 'username': " ", 'password': " ",
+                'stream_name': "pattern?streamKey=87a01fc49801f9771ecd0bb7666d6c04", 'group': "out",
+                'channel': 'ch2'
+            },  # rtsp://zephyr.rtsp.stream/pattern?streamKey=87a01fc49801f9771ecd0bb7666d6c04
+        ],  # Dictionary that uses VideoManagers. List (["/path_to_your_video/...mp4", ...]) will use LoadBatchVideos.
         vid_batch=1,  # Sets the batch in each stream.
         div_fps=1,  # Used to control inference FPS = original FPS / div_fps.
         preproc=None,  # Pre-processing Transformer for images.
@@ -188,13 +211,14 @@ if __name__ == "__main__":
         vis_mode='all',  # 'show': show video streaming in window, 'write': only write into output video, 'all': both.
         queue_maxsize=10,  # Maximum size of the queue for pre-reading video streaming
         vid_queue_maxsize=200,  # Maximum size of the queue for writing video streaming
-        video_sec=600,  # Only used to record stream.video_sec and calculate stream.epochframes in real-time video.
+        video_sec=3600,  # Only used to record stream.video_sec and calculate stream.epochframes in real-time video.
         visualizer=None,  # A unique instance to show the video streaming.
         end_title='',  # Used by logger.info after the new video has been written to output from writer.
         SYSDTFORMAT='%Y%m%d%H%M%S',  # Used to name the datetime.mp4.
         YMDFORMAT='%Y%m%d000000',  # Used to name the date_time folder.
         warnning=True,  # Show warnings in the terminal. Set to False to skip showing information.
         start=False,  # Automatically start capturing images from video streaming after successful initialization.
+        close_prev_window=True,  # Close previous window when new window be opened.
         processing_strategy=OnlyShowStrategy  # Create strategy instance by extending the ImageProcessingStrategy class.
     )
 
