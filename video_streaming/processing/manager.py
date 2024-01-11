@@ -10,7 +10,7 @@ from .writer import VideoWriter
 class VideoManagers:
     _instances = {}
 
-    def __init__(self, mode, vis_mode, stream, stream_thread, save_dir, visualizer, end_title):
+    def __init__(self, mode, vis_mode, stream, stream_thread, save_dir, visualizer, end_title, vid_queue_maxsize=200):
         # update parameters
         self.mode = mode
         self.vis_mode = vis_mode
@@ -18,11 +18,12 @@ class VideoManagers:
         self.stream_thread = stream_thread
         self.save_dir = save_dir
         self.visualizer = visualizer
-        # TODO: maxsize
         self.vid_writer = VideoWriter(
             self.save_dir, stream.video_define, stream.start_time, stream.infer_fps,
             stream.width, stream.height, vid_reload=True if mode == 'webcam' else False, title=end_title,
-            visualizer=self.visualizer, keepname=False if mode == 'webcam' else stream.video_define['start_time']
+            queue_maxsize=vid_queue_maxsize, visualizer=self.visualizer,
+            keepdate=False if mode == 'webcam' else stream.video_define['start_time'] == 'videoname',
+            keepname=False if mode == 'webcam' else stream.video_define['start_time'] == 'videoname'
         )
         # vis mode thread
         if self.vis_mode == 'write':
@@ -59,11 +60,11 @@ class VideoManagers:
     @classmethod
     def create(
         cls, video_sources: dict, video_defines: dict, div_fps, save_dir, vis_mode, video_sec=0,
-        visualizer=None, end_title='', SYSDTFORMAT='', YMDFORMAT='', warn=True
+        visualizer=None, end_title='', SYSDTFORMAT='', YMDFORMAT='', warn=True, queue_maxsize=10, vid_queue_maxsize=200
     ):
         """
         Args:
-            video_sources: {id: "video path"} TODO
+            video_sources: {id: "video path", ...}
             video_defines: {id: {"parent_folder": [None, ...], "start_time": "current"}}
         """
         initialized_video_source = set()
@@ -79,7 +80,7 @@ class VideoManagers:
             # load stream
             stream, stream_thread = Stream.load(
                 mode, video_source, video_define, div_fps, save_dir, video_sec=video_sec,
-                SYSDTFORMAT=SYSDTFORMAT, YMDFORMAT=YMDFORMAT, warn=warn
+                SYSDTFORMAT=SYSDTFORMAT, YMDFORMAT=YMDFORMAT, warn=warn, queue_maxsize=queue_maxsize
             )
             initialized_video_source.add(str(video_source))
 
@@ -88,7 +89,10 @@ class VideoManagers:
                 continue
 
             # get manager
-            cls._instances[k] = VideoManagers(mode, vis_mode, stream, stream_thread, save_dir, visualizer, end_title)
+            cls._instances[k] = VideoManagers(
+                mode, vis_mode, stream, stream_thread, save_dir, visualizer, end_title,
+                vid_queue_maxsize=vid_queue_maxsize
+            )
         return cls._instances
 
 

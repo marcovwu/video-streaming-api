@@ -11,8 +11,8 @@ VIDFORMAT = {'.mp4': "mp4v"}
 
 class VideoWriter:
     def __init__(
-        self, save_dir, video_define, start_time, runfps, width, height, init_writer=False,
-        vid_reload=False, title='', vid_format='.mp4', queue=None, queue_maxsize=200, visualizer=None, keepname=False
+        self, save_dir, video_define, start_time, runfps, width, height, init_writer=False, vid_reload=False, title='',
+        vid_format='.mp4', queue=None, queue_maxsize=200, visualizer=None, keepdate=False, keepname=False
     ):
         self.save_dir = save_dir
         self.video_define = video_define
@@ -23,6 +23,7 @@ class VideoWriter:
         self.vid_format = vid_format
         self.title = title
         self.vid_reload = vid_reload
+        self.keepdate = keepdate
         self.keepname = keepname
         # init
         self.writer = None
@@ -34,16 +35,20 @@ class VideoWriter:
         self.queue = Queue(maxsize=self.queue_maxsize) if queue is None else queue
         self._update_writer(start_time, is_need_new_writer=init_writer)
 
-    def _init_writer_path(self, start_time):
+    def _init_writer_path(self, start_time, current_date_time=""):
         self.start_time = start_time if not self.keepname else self.start_time
+        if not self.keepdate and len(current_date_time):
+            if len(self.video_define['parent_folder']):
+                self.video_define['parent_folder'][-1] = current_date_time
+            else:
+                self.video_define['parent_folder'] = [current_date_time]
         self.save_folder = os.path.join(self.save_dir, *self.video_define['parent_folder'])
         self.save_folder = self.save_folder if len(self.save_folder) else './'
         self.save_path = os.path.join(self.save_folder, self.start_time + self.vid_format)
         self.WINDOW_NAME = 'Process Video Streaming in %s' % self.save_path
 
     def _update_writer(self, start_time, current_date_time="", is_need_new_writer=True):
-        # TODO: update new date folder into save_folder when is_need_new_writer is True
-        self._init_writer_path(start_time)
+        self._init_writer_path(start_time, current_date_time=current_date_time)
         # Init New VideoWriter
         if is_need_new_writer:
             self.run_stop()

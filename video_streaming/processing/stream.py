@@ -16,20 +16,21 @@ class Stream(ABC):
 
     @classmethod
     def load(
-        cls, mode, video_path, define, div_fps, save_dir, video_sec=0, SYSDTFORMAT='', YMDFORMAT='', warn=True
+        cls, mode, video_path, define, div_fps, save_dir, video_sec=0, SYSDTFORMAT='', YMDFORMAT='', warn=True,
+        queue_maxsize=10
     ):
         cls.SYSDTFORMAT = SYSDTFORMAT
         cls.YMDFORMAT = YMDFORMAT
         if cls != Stream:
             raise NotImplementedError("Subclasses must implement from_dict()")
         if mode == "video":
-            stream = VideoStream(video_path, define, div_fps, save_dir, SYSDTFORMAT=SYSDTFORMAT)
+            stream = VideoStream(
+                video_path, define, div_fps, save_dir, SYSDTFORMAT=SYSDTFORMAT, queue_maxsize=queue_maxsize)
             # stream_thread = None
             stream_thread = Thread(target=stream.run, daemon=True)
         elif mode == "webcam":
-            # TODO: maxsize
             stream = LiveVideoStream(
-                video_path, define, video_sec, div_fps, save_dir, SYSDTFORMAT, YMDFORMAT, queue_maxsize=10,
+                video_path, define, video_sec, div_fps, save_dir, SYSDTFORMAT, YMDFORMAT, queue_maxsize=queue_maxsize,
                 warn=warn
             )
             stream_thread = Thread(target=stream.run, daemon=True)
@@ -74,7 +75,7 @@ class Stream(ABC):
 
 
 class VideoStream(Stream):
-    def __init__(self, source, define, div_fps=1, save_dir='', SYSDTFORMAT='%Y%m%d%H%M%S'):
+    def __init__(self, source, define, div_fps=1, save_dir='', SYSDTFORMAT='%Y%m%d%H%M%S', queue_maxsize=100):
         # process parent folder
         for i in range(len(define['parent_folder'])):
             if define['parent_folder'][-(i + 1)] is None:
@@ -108,7 +109,7 @@ class VideoStream(Stream):
         self.maxframes = int(self.capture.get(cv2.CAP_PROP_FRAME_COUNT))
         self.epochframes = self.maxframes
         self.infer_fps = self.fps // self.div_fps
-        self.queue = Queue(maxsize=100)  # self.queue_maxsize) if queue is None else queue
+        self.queue = Queue(maxsize=queue_maxsize)  # self.queue_maxsize) if queue is None else queue
 
     def stop(self, stop_stream=True):
         self.stop_stream = stop_stream
@@ -143,9 +144,12 @@ class VideoStream(Stream):
 
     def read(self, frame):
         """ Read new image from stream """
-        ret, frame, img, info = self.queue.get(timeout=1)
-        if not ret:
-            self.stop_signal = True
+        try:
+            ret, frame, img, info = self.queue.get(timeout=1)
+            if not ret:
+                self.stop_signal = True
+        except Exception:
+            ret, frame, img, info = False, -1, None, {}
         return ret, frame, img, info
 
     def run(self):

@@ -19,8 +19,9 @@ class StreamingRunner:
 
     def __init__(
         self, video_sources, video_defines=None, vid_batch=1, div_fps=1, preproc=None, imgsz=(640, 640), save_dir='./',
-        vis_mode='write', video_sec=600, visualizer=None, end_title='', SYSDTFORMAT='%Y%m%d%H%M%S',
-        YMDFORMAT='%Y%m%d000000', warnning=True, start=False, processing_strategy=OnlyShowStrategy
+        vis_mode='write', queue_maxsize=10, vid_queue_maxsize=200, video_sec=600, visualizer=None, end_title='',
+        SYSDTFORMAT='%Y%m%d%H%M%S', YMDFORMAT='%Y%m%d000000', warnning=True, start=False,
+        processing_strategy=OnlyShowStrategy
     ):
         self.video_sources, self.video_defines = StreamingRunner.update_video_info(video_sources, video_defines)
         if isinstance(self.video_sources, dict):
@@ -29,7 +30,7 @@ class StreamingRunner:
             self.video_managers = VideoManagers.create(
                 self.video_sources, self.video_defines, div_fps, save_dir, vis_mode, video_sec=video_sec,
                 visualizer=visualizer, end_title=end_title, SYSDTFORMAT=SYSDTFORMAT, YMDFORMAT=YMDFORMAT,
-                warn=warnning
+                warn=warnning, queue_maxsize=queue_maxsize, vid_queue_maxsize=vid_queue_maxsize
             )
         else:
             # Create Dataset
@@ -185,6 +186,8 @@ if __name__ == "__main__":
         imgsz=(640, 640),  # Use to pre-process image to this size.
         save_dir='./',  # Used to write video in this format: /save_dir/group/channel/YMDFORMAT/SYSDTFORMAT.mp4
         vis_mode='all',  # 'show': show video streaming in window, 'write': only write into output video, 'all': both.
+        queue_maxsize=10,  # Maximum size of the queue for pre-reading video streaming
+        vid_queue_maxsize=200,  # Maximum size of the queue for writing video streaming
         video_sec=600,  # Only used to record stream.video_sec and calculate stream.epochframes in real-time video.
         visualizer=None,  # A unique instance to show the video streaming.
         end_title='',  # Used by logger.info after the new video has been written to output from writer.
