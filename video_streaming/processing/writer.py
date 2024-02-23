@@ -48,9 +48,9 @@ class VideoWriter:
                 self.video_define['parent_folder'] = [current_date_time]
         self.save_folder = os.path.join(
             self.save_dir, *[f for f in self.video_define['parent_folder'] if f is not None])
-        self.save_folder = self.save_folder if len(self.save_folder) else './'
+        self.save_folder = self.save_folder if len(self.save_folder) else '.' + os.sep
         self.save_path = os.path.join(self.save_folder, self.start_time + self.vid_format)
-        self.WINDOW_NAME = 'Process Video Streaming in %s' % self.save_path
+        self.WINDOW_NAME = 'Process Video Streaming in %s' % self.save_path.replace(os.sep, '/')
         if self.close_prev_window and self.CUR_WINDOW_NAME is not None and self.CUR_WINDOW_NAME != self.WINDOW_NAME:
             cv2.destroyWindow(self.CUR_WINDOW_NAME)
 
@@ -140,8 +140,8 @@ class VideoWriter:
 
     def process_video(self, write=True, show=True, delay=True):
         while True:
-            im0, current_date_time, current_time, current_sec, vis = self.queue.get()
-            if im0 is None:
+            imgs, current_date_time, current_time, current_sec, vis = self.queue.get()
+            if imgs is None:
                 # stop the current writer
                 if current_time:
                     self.run_stop()
@@ -150,14 +150,15 @@ class VideoWriter:
             else:
                 # write
                 if self._check_write(write, vis):
-                    res = self.write_image(im0, current_date_time, current_time)
+                    res = self.write_image(imgs['write'], current_date_time, current_time)
                     if res:
                         break
 
                 # show
                 if self._check_show(show, vis):
-                    res = self.show_image(im0, current_sec, delay=delay)
+                    res = self.show_image(imgs['show'], current_sec, delay=delay)
                     if res:
+                        print('End to show image!!!!!!!!!!!!!!!!!')
                         break
 
         # put None to the queue of visualizer for release the current window

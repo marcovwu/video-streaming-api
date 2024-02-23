@@ -26,7 +26,6 @@ class LoadBatchVideos:
         self.preproc = preproc
         self.img_size = img_size
         self.vid_batch = vid_batch
-        self.visualizer = visualizer
         self.end_title = '\n------------------------------------------------' + (
             '\n' + '%20s' * 2) % ('Infer Time', 'Total Time')
         # get video paths
@@ -132,10 +131,6 @@ class LoadBatchVideos:
             self.frames[k] = 0
             self.finalframes[k] = 0
             video_manager.start()
-
-        # show image
-        if self.visualizer is not None:
-            self.visualizer.run_start()
         return self
 
     def __next__(self):

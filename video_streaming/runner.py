@@ -42,6 +42,7 @@ class StreamingRunner:
                 close_prev_window=close_prev_window
             )
             self.video_managers = None
+        self.visualizer = visualizer
         self.processing_strategy = processing_strategy
 
         # Initialize status
@@ -80,16 +81,30 @@ class StreamingRunner:
         self.stop_flag = False
         self.is_need_start = False
 
-    def write_video(self, manager, result_frame, img_info):
+    def adjust_size(self, width, height, new_writer=False):
+        if self.video_managers is None:
+            for _, manager in self.dataset.video_managers.items():
+                manager.vid_writer.adjust_size(width, height, init_video_writer=new_writer)
+        else:
+            for _, manager in self.video_managers.items():
+                manager.vid_writer.adjust_size(width, height, init_video_writer=new_writer)
+
+    def write_video(self, manager, img_info):
         if manager.vid_writer.stop_flag:
             self.predictor_stop_flag[img_info["id"]] = True
             return
         vid_info = img_info["dt"], img_info["cur_time"], img_info["cur_sec"]
+
         # Init VideoWriter in new epoch
         if img_info["is_newepoch"]:
             manager.vid_writer.put_frame(None, *vid_info)
+
         # Current Result
-        manager.vid_writer.put_frame(result_frame, *vid_info)
+        manager.vid_writer.put_frame({
+            'show': img_info["show_img"] if "show_img" in img_info else img_info["raw_img"],
+            'write': img_info["raw_img"]
+        }, *vid_info)
+
         # Stop VideoWrite in last frames
         if img_info["is_epochfinal"]:
             manager.vid_writer.put_frame(None, *vid_info)
@@ -114,14 +129,15 @@ class StreamingRunner:
                 # processing image and show output information in image
                 manager = self.dataset.video_managers[img_info["id"]]
                 output = outputs[i] if i <= len(outputs) - 1 else None
-                w = self.processing_strategy.process_image(manager, (img_info, imgs[i], output))
+                w = self.processing_strategy.process_image(
+                    manager, {'img_info': img_info, 'ori_img': imgs[i], 'out': output})
                 if self.processing_strategy.check_stop(manager, img_info):
                     manager.stop()
                     continue
 
                 # show
                 if w and manager.vid_thread is not None:
-                    self.write_video(manager, img_info["raw_img"], img_info)
+                    self.write_video(manager, img_info)
                     # cur_date_time, cur_second, cur_time, _ = manager.stream.get_cur_info(img_info['cur_sec'])
                     # manager.vid_writer.put_frame(img_info["raw_img"], cur_date_time, cur_time, cur_second, vis='a')
 
@@ -133,7 +149,7 @@ class StreamingRunner:
             StreamingRunner.stop_manager(manager)
 
         # close main infer thread
-        cv2.destroyAllWindows()
+        # cv2.destroyAllWindows()
 
     def process_image(self):
         # Show video streaming
@@ -149,13 +165,16 @@ class StreamingRunner:
                 if not ret or img is None:
                     continue
                 sys_info = {'start': time.time(), 'infer': 0.0}
-                img_info = {"img": img, "frame": frames[k], "info": info}
+                img_info = {
+                    "raw_img": img, "frame": frames[k], "info": info, "is_newepoch": False, "is_epochfinal": False
+                }
 
                 # Pre-processing batch images
                 output = self.processing_strategy.pre_process_images(img_info, img, sys_info)
 
                 # processing image and show output information in image
-                w = self.processing_strategy.process_image(manager, (ret, frames[k], img_info, info, output))
+                w = self.processing_strategy.process_image(
+                    manager, {'ret': ret, 'img_info': img_info, 'out': output})
                 if self.processing_strategy.check_stop(manager, info):
                     manager.stop()
                     continue
@@ -163,7 +182,11 @@ class StreamingRunner:
                 # show
                 if w and manager.vid_thread is not None:
                     cur_date_time, cur_second, cur_time, _ = manager.stream.get_cur_info(info['sec'])
-                    manager.vid_writer.put_frame(img_info["img"], cur_date_time, cur_time, cur_second, vis='a')
+                    img_info["dt"] = cur_date_time
+                    img_info["cur_time"] = cur_time
+                    img_info["cur_sec"] = cur_second
+                    self.write_video(manager, img_info)
+                    # manager.vid_writer.put_frame(img_info["raw_img"], cur_date_time, cur_time, cur_second, vis='a')
 
         # Stop the video manager
         time.sleep(1)
@@ -171,9 +194,9 @@ class StreamingRunner:
             StreamingRunner.stop_manager(manager)
 
         # close main infer thread
-        cv2.destroyAllWindows()
+        # cv2.destroyAllWindows()
 
-    def run(self):
+    def run(self, stop_visualizer=True):
         # Start process
         if self.is_need_start:
             self._start()
@@ -183,6 +206,10 @@ class StreamingRunner:
             self.process_batch_images()
         elif self.video_managers is not None:
             self.process_image()
+
+        # stop visualize
+        if self.visualizer is not None and stop_visualizer and not self.visualizer.stop_flag:
+            self.visualizer.run_stop()
 
         self.stop_flag = True
 

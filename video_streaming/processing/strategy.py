@@ -76,8 +76,8 @@ class CaptureBackgroundStrategy(ImageProcessingStrategy):
         return tuple()
 
     def process_image(manager, image_info):
-        _, _, img_info, info, _ = image_info
-        img = img_info["img"]
+        img_info, info = image_info['img_info'], image_info['img_info']['info']
+        img = img_info["raw_img"]
         if CaptureBackgroundStrategy.is_need_capture:
             if img is None:
                 CaptureBackgroundStrategy.bad_image_counter += 1
@@ -125,8 +125,8 @@ class RecordVideoStrategy(ImageProcessingStrategy):
         return tuple()
 
     def process_image(self, manager, image_info):
-        _, _, img_info, info, _ = image_info
-        img = img_info["img"]
+        img_info, info = image_info['img_info'], image_info['img_info']['info']
+        img = img_info["raw_img"]
         if self.is_need_record:
             if img is not None:
                 # show
